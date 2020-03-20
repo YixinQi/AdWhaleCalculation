@@ -1,0 +1,11 @@
+.gradle
+/build/
+
+.classpath
+.project
+.settings
+.*csv
+
+### IntelliJ IDEA ###
+.idea
+/out/
