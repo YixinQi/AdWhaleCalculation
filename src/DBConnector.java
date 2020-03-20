@@ -2,7 +2,6 @@ import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -22,6 +21,7 @@ class DBConnector {
 
         String date = getTodayDate();
         try {
+            System.out.println("Start Time" + new Date());
             TableManager.creteDB();
 
             if (TableManager.checkOpsHasReaded(date)) {
@@ -35,6 +35,8 @@ class DBConnector {
             TableManager.groupValueByUser(date);
 
             TableManager.recordOps(date);
+
+            System.out.println("End Time" + new Date());
 
         } catch (Exception e) {
             e.printStackTrace();

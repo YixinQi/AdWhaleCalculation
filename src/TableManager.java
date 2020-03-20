@@ -22,10 +22,7 @@ class TableManager {
             "   PRIMARY KEY (device_id, ad_unit)\n" +
             ");";
     private static final String NEW_USER_INSERT_SQL = "INSERT INTO daily_new_user (device_id) VALUES (?)";
-    private static final String CREATE_NEW_USER_TABLE_SQL = "CREATE TABLE daily_new_user(\n" +
-            "\tdevice_id CHAR(100) NOT NULL,\n" +
-            "   PRIMARY KEY device_id\n" +
-            ");";
+    private static final String CREATE_NEW_USER_TABLE_SQL = "CREATE TABLE daily_new_user( device_id CHAR(100) PRIMARY KEY NOT NULL)";
 
 
     static void loadDailyCSV(String csvFile,
@@ -38,8 +35,12 @@ class TableManager {
         BufferedReader br = new BufferedReader(new FileReader(csvFile));
         String line;
         Connection connection = DBConnector.connectDB();
-
+        int lineNo = 1;
         while ((line = br.readLine()) != null) {
+            if (lineNo == 1) {
+                lineNo++;
+                continue;
+            }
             PreparedStatement preparedStatement = connection.prepareStatement(AD_VALUE_INSERT_SQL);
             String[] values = line.split(",");
             preparedStatement.setString(1, values[0]);
@@ -48,6 +49,7 @@ class TableManager {
             preparedStatement.setDouble(4, Double.parseDouble(values[3]));
 
             preparedStatement.executeUpdate();
+            lineNo++;
         }
 
         br.close();
@@ -64,12 +66,17 @@ class TableManager {
         BufferedReader br = new BufferedReader(new FileReader(csvFile));
         String line;
         Connection connection = DBConnector.connectDB();
-
+        int lineNo = 1;
         while ((line = br.readLine()) != null) {
+            if (lineNo == 1) {
+                lineNo++;
+                continue;
+            }
             PreparedStatement preparedStatement = connection.prepareStatement(NEW_USER_INSERT_SQL);
             String[] values = line.split(",");
             preparedStatement.setString(1, values[0]);
             preparedStatement.executeUpdate();
+            lineNo++;
         }
 
         br.close();
@@ -243,7 +250,6 @@ class TableManager {
     private static void createTable(String createSql) throws SQLException, ClassNotFoundException{
         Connection connection = DBConnector.connectDB();
         Statement createStatement = connection.createStatement();
-
         createStatement.executeUpdate(createSql);
 
         createStatement.close();

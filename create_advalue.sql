@@ -1,4 +1,4 @@
-CREATE TABLE user_value(
+CREATE TABLE IF NOT EXISTS user_value(
    device_id CHAR(100) PRIMARY KEY NOT NULL,
    d1_ltv REAL NOT NULL,
    d2_ltv REAL NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE user_value(
    last_update_time DATETIME NOT NULL
 );
 
-CREATE TABLE daily_value(
+CREATE TABLE IF NOT EXISTS daily_value(
 	device_id CHAR(100) NOT NULL,
 	ad_unit CHAR(100) NOT NULL,
 	impression INT NOT NULL,
@@ -19,6 +19,10 @@ CREATE TABLE daily_value(
    PRIMARY KEY (device_id, ad_unit)
 );
 
-CREATE TABLE daily_new_user(
+CREATE TABLE IF NOT EXISTS daily_new_user(
 	device_id CHAR(100) PRIMARY KEY NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS daily_operation_record(
+	date CHAR(100) PRIMARY KEY NOT NULL
 );
