@@ -1,12 +1,12 @@
 CREATE TABLE user_value(
    device_id CHAR(100) PRIMARY KEY NOT NULL,
-   d1_ltv REAL NOT NULL,
-   d2_ltv REAL NOT NULL,
-   d3_ltv REAL NOT NULL,
-   d4_ltv REAL NOT NULL,
-   d5_ltv REAL NOT NULL,
-   d6_ltv REAL NOT NULL,
-   d7_ltv REAL NOT NULL,
+   d1_ltv REAL,
+   d2_ltv REAL,
+   d3_ltv REAL,
+   d4_ltv REAL,
+   d5_ltv REAL,
+   d6_ltv REAL,
+   d7_ltv REAL,
    in_app_age INT NOT NULL,
    last_update_time DATETIME NOT NULL
 );
@@ -22,3 +22,17 @@ CREATE TABLE daily_value(
 CREATE TABLE daily_new_user(
 	device_id CHAR(100) PRIMARY KEY NOT NULL
 );
+
+CREATE TABLE daily_operation_record(
+    op_date DATETIME PRIMARY KEY
+);
+
+CREATE TABLE value_threshold(
+    d1_threshold REAL,
+    d2_threshold REAL,
+    d3_threshold REAL,
+    d4_threshold REAL,
+    d5_threshold REAL,
+    d6_threshold REAL,
+    d7_threshold REAL
+)

@@ -1,13 +1,11 @@
-import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 class DBConnector {
-    static Connection connectDB() throws SQLException, ClassNotFoundException {
+    static Connection connectDB() throws SQLException {
         String url = "jdbc:sqlite:AdValue.db";
         return DriverManager.getConnection(url);
     }
@@ -19,23 +17,23 @@ class DBConnector {
     }
 
     public static void main(String[] args) {
-
         String date = getTodayDate();
-        try {
-            TableManager.creteDB();
+        TableManager tableManager = new TableManager(date);
 
-            if (TableManager.checkOpsHasReaded(date)) {
-                throw new Exception("has been readed today");
+        try {
+            if (!tableManager.checkAllTablesExistence()) {
+                tableManager.creteDBTables();
             }
 
-            TableManager.loadDailyCSV(date + "ads_LTV.csv", true);
+            if (tableManager.checkOpsHasReaded()) {
+                throw new RuntimeException("has been readed today");
+            }
 
-            TableManager.insertNewUser(date + "newUser.csv", true);
-
-            TableManager.groupValueByUser(date);
-
-            TableManager.recordOps(date);
-
+            tableManager.loadDailyValueCSV(date + "ads_LTV.csv", true);
+            tableManager.loadNewUserCSV(date + "newUser.csv", true);
+            tableManager.insertOrUpdateUserValues();
+            tableManager.recordOps();
+            tableManager.insertOrUpdateThreshold();
         } catch (Exception e) {
             e.printStackTrace();
         }
