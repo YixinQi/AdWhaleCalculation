@@ -45,6 +45,7 @@ class DBConnector {
             tableManager.insertOrUpdateUserValues();
             tableManager.recordOps();
             tableManager.insertOrUpdateThreshold();
+            tableManager.generateAdWhaleDeviceids();
             System.out.println("End Time" + new Date());
         } catch (Exception e) {
             e.printStackTrace();
