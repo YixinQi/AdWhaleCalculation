@@ -17,6 +17,7 @@ class TableManager {
     private static final String DAILY_NEW_USER_TABLE = "daily_new_user";
     private static final String USER_VALUE_TABLE = "user_value";
     private static final String VALUE_THRESHOLD_TABLE = "value_threshold";
+    private static final String DAILY_OPERATION_TABLE = "daily_operation_record";
     private static final String AD_VALUE_INSERT_SQL = "INSERT INTO daily_value (device_id, ad_unit, impression, ads_value) VALUES (?,?,?,?)";
     private static final String DROP_TABLE_SQL = "DROP TABLE IF EXISTS";
     private static final String NEW_USER_INSERT_SQL = "INSERT INTO daily_new_user (device_id) VALUES (?)";
@@ -84,7 +85,6 @@ class TableManager {
             String[] values = line.split(",");
             preparedStatement.setString(1, values[0]);
             preparedStatement.executeUpdate();
-            lineNo++;
         }
 
         br.close();
@@ -121,6 +121,13 @@ class TableManager {
                 "(d2_ltv >= d2_threshold and d2_threshold > 0 and in_app_age = 2) or " +
                 "(d4_ltv >= d4_threshold and d4_threshold > 0 and in_app_age = 4) or " +
                 "(d6_ltv >= d6_threshold and d6_threshold > 0 and in_app_age = 6)";
+                        "select device_id,d2_ltv,d4_ltv,d6_ltv,d2_threshold,d4_threshold,d6_threshold from " + USER_VALUE_TABLE + " " +
+                        "left join  " + VALUE_THRESHOLD_TABLE +
+                        ") " +
+                    " where  " +
+                    "(d2_ltv >= d2_threshold and d2_threshold > 0) or " +
+                    "(d4_ltv >= d4_threshold and d4_threshold > 0) or " +
+                    "(d6_ltv >= d6_threshold and d6_threshold > 0)";
         Connection connection = DBConnector.connectDB();
         Statement statement = connection.createStatement();
         ResultSet rs = statement.executeQuery(sql);
@@ -148,6 +155,8 @@ class TableManager {
 
     boolean checkOpsHasRead() throws SQLException {
         String checkCurDateOpsSql = "select * from daily_operation_record where op_date = \"" + curDate + "\"";
+    boolean checkOpsHasReaded() throws SQLException {
+        String checkCurDateOpsSql = "select * from " + DAILY_OPERATION_TABLE + " where op_date = \"" + curDate + "\"";
         Connection connection = DBConnector.connectDB();
         Statement statement = connection.createStatement();
         ResultSet rs = statement.executeQuery(checkCurDateOpsSql);
@@ -164,7 +173,7 @@ class TableManager {
     }
 
     void recordOps() throws SQLException {
-        String insertOpsDateSql = "INSERT INTO daily_operation_record VALUES (\"" + curDate + "\")";
+        String insertOpsDateSql = "INSERT INTO " + DAILY_OPERATION_TABLE + "  VALUES (\"" + curDate + "\")";
         Connection connection = DBConnector.connectDB();
         Statement statement = connection.createStatement();
         statement.executeUpdate(insertOpsDateSql);
@@ -219,8 +228,8 @@ class TableManager {
 
     private void updateOldUserValues() throws SQLException, ParseException {
         String sql = "select u.*, sum(v.ads_value) as revenue " +
-                "from user_value u " +
-                "left join daily_value v " +
+                "from " + USER_VALUE_TABLE + " u " +
+                "left join " + DAILY_VALUE_TABLE + " v " +
                 "on u.device_id = v.device_id " +
                 "group by v.device_id";
         Connection connection = DBConnector.connectDB();
@@ -247,8 +256,8 @@ class TableManager {
             value = value != null ? value : "0";
             ltvColumn = "d" + in_app_age + "_ltv";
 
-            String sqlUpdateValue = "update user_value ";
-            sqlUpdateValue += in_app_age >= 8 ? "set " : "set " + ltvColumn + " = \"" + value + "\", ";
+            String sqlUpdateValue = "update " + USER_VALUE_TABLE;
+            sqlUpdateValue += in_app_age >= 8 ? " set " : " set " + ltvColumn + " = \"" + value + "\", ";
             sqlUpdateValue += "last_update_time = \"" + now + "\", " +
                     "in_app_age = " + in_app_age + " " +
                     "where device_id = \"" + deviceId + "\"";
@@ -261,8 +270,8 @@ class TableManager {
 
     private void insertNewUserValues() throws SQLException {
         String sql = "select n.device_id as device_id, sum(v.ads_value) as revenue " +
-                "from daily_new_user n " +
-                "left join daily_value v " +
+                "from " + DAILY_NEW_USER_TABLE + " n " +
+                "left join " + DAILY_VALUE_TABLE + " v " +
                 "on n.device_id = v.device_id " +
                 "group by v.device_id";
         Connection connection = DBConnector.connectDB();
@@ -277,7 +286,7 @@ class TableManager {
                 continue;
             }
             String value = rs.getString("revenue");
-            String insertValueSql = "insert into user_value values(\"" + deviceId + "\", " + value + ", 0, 0, 0, 0, 0, 0, 1, \"" + updateDate + "\")";
+            String insertValueSql = "insert into " + USER_VALUE_TABLE + " values(\"" + deviceId + "\", " + value + ", 0, 0, 0, 0, 0, 0, 1, \"" + updateDate + "\")";
             statement.executeUpdate(insertValueSql);
         }
 
@@ -326,7 +335,7 @@ class TableManager {
     }
 
     private boolean isNewUser(String device_id) throws SQLException {
-        String checkUserSql = "select * from user_value where device_id = \"" + device_id + "\"";
+        String checkUserSql = "select * from " + USER_VALUE_TABLE + " where device_id = \"" + device_id + "\"";
         Connection connection = DBConnector.connectDB();
         Statement statement = connection.createStatement();
         ResultSet rs = statement.executeQuery(checkUserSql);
