@@ -39,13 +39,14 @@ class DBConnector {
             if (!file.exists()) {
                 throw new RuntimeException("no newUser CSV file today");
             }
+            String dailyAdWhaleDeviceidsFile = date + "AdWhaleDeviceids.csv";
             System.out.println("Start Time" + new Date());
             tableManager.loadDailyValueCSV(dailyValueCSVFile, true);
             tableManager.loadNewUserCSV(dailyNewUserCSVFile, true);
             tableManager.insertOrUpdateUserValues();
             tableManager.recordOps();
             tableManager.insertOrUpdateThreshold();
-            tableManager.generateAdWhaleDeviceids();
+            tableManager.generateAdWhaleDeviceids(dailyAdWhaleDeviceidsFile);
             System.out.println("End Time" + new Date());
         } catch (Exception e) {
             e.printStackTrace();
