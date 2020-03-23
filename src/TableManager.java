@@ -114,20 +114,13 @@ class TableManager {
 
     void generateAdWhaleDeviceIds() throws SQLException, IOException {
         String sql = "select device_id from (" +
-                "select device_id,d2_ltv,d4_ltv,d6_ltv,d2_threshold,d4_threshold,d6_threshold,in_app_age from user_value " +
-                "left join value_threshold " +
+                "select device_id,d2_ltv,d4_ltv,d6_ltv,d2_threshold,d4_threshold,d6_threshold,in_app_age from " + USER_VALUE_TABLE + " " +
+                "left join  " + VALUE_THRESHOLD_TABLE +
                 ") " +
                 " where  " +
                 "(d2_ltv >= d2_threshold and d2_threshold > 0 and in_app_age = 2) or " +
                 "(d4_ltv >= d4_threshold and d4_threshold > 0 and in_app_age = 4) or " +
                 "(d6_ltv >= d6_threshold and d6_threshold > 0 and in_app_age = 6)";
-                        "select device_id,d2_ltv,d4_ltv,d6_ltv,d2_threshold,d4_threshold,d6_threshold from " + USER_VALUE_TABLE + " " +
-                        "left join  " + VALUE_THRESHOLD_TABLE +
-                        ") " +
-                    " where  " +
-                    "(d2_ltv >= d2_threshold and d2_threshold > 0) or " +
-                    "(d4_ltv >= d4_threshold and d4_threshold > 0) or " +
-                    "(d6_ltv >= d6_threshold and d6_threshold > 0)";
         Connection connection = DBConnector.connectDB();
         Statement statement = connection.createStatement();
         ResultSet rs = statement.executeQuery(sql);
@@ -154,8 +147,6 @@ class TableManager {
     }
 
     boolean checkOpsHasRead() throws SQLException {
-        String checkCurDateOpsSql = "select * from daily_operation_record where op_date = \"" + curDate + "\"";
-    boolean checkOpsHasReaded() throws SQLException {
         String checkCurDateOpsSql = "select * from " + DAILY_OPERATION_TABLE + " where op_date = \"" + curDate + "\"";
         Connection connection = DBConnector.connectDB();
         Statement statement = connection.createStatement();
