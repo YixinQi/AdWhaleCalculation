@@ -1,3 +1,4 @@
+import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -28,12 +29,23 @@ class DBConnector {
             if (tableManager.checkOpsHasReaded()) {
                 throw new RuntimeException("has been readed today");
             }
-
-            tableManager.loadDailyValueCSV(date + "ads_LTV.csv", true);
-            tableManager.loadNewUserCSV(date + "newUser.csv", true);
+            String dailyValueCSVFile = date + "ads_LTV.csv";
+            File file = new File(dailyValueCSVFile);
+            if (!file.exists()) {
+                throw new RuntimeException("no ads_LTV CSV file today");
+            }
+            String dailyNewUserCSVFile = date + "newUser.csv";
+            file = new File(dailyNewUserCSVFile);
+            if (!file.exists()) {
+                throw new RuntimeException("no newUser CSV file today");
+            }
+            System.out.println("Start Time" + new Date());
+            tableManager.loadDailyValueCSV(dailyValueCSVFile, true);
+            tableManager.loadNewUserCSV(dailyNewUserCSVFile, true);
             tableManager.insertOrUpdateUserValues();
             tableManager.recordOps();
             tableManager.insertOrUpdateThreshold();
+            System.out.println("End Time" + new Date());
         } catch (Exception e) {
             e.printStackTrace();
         }

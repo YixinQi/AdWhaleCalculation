@@ -36,8 +36,12 @@ class TableManager {
         BufferedReader br = new BufferedReader(new FileReader(csvFile));
         String line;
         Connection connection = DBConnector.connectDB();
-
+        int lineNo = 1;
         while ((line = br.readLine()) != null) {
+            if (lineNo == 1) {
+                lineNo++;
+                continue;
+            }
             PreparedStatement preparedStatement = connection.prepareStatement(AD_VALUE_INSERT_SQL);
             String[] values = line.split(",");
             preparedStatement.setString(1, values[0]);
@@ -46,6 +50,7 @@ class TableManager {
             preparedStatement.setDouble(4, Double.parseDouble(values[3]));
 
             preparedStatement.executeUpdate();
+            lineNo++;
         }
 
         br.close();
@@ -62,11 +67,17 @@ class TableManager {
         String line;
         Connection connection = DBConnector.connectDB();
 
+        int lineNo = 1;
         while ((line = br.readLine()) != null) {
+            if (lineNo == 1) {
+                lineNo++;
+                continue;
+            }
             PreparedStatement preparedStatement = connection.prepareStatement(NEW_USER_INSERT_SQL);
             String[] values = line.split(",");
             preparedStatement.setString(1, values[0]);
             preparedStatement.executeUpdate();
+            lineNo++;
         }
 
         br.close();
@@ -100,6 +111,8 @@ class TableManager {
         ResultSet rs = statement.executeQuery(checkCurDateOpsSql);
 
         while (rs.next()) {
+            statement.close();
+            connection.close();
             return true;
         }
 
@@ -178,10 +191,10 @@ class TableManager {
             String deviceId = rs.getString("device_id");
             String value = rs.getString("revenue");
             int in_app_age = rs.getInt("in_app_age") + 1;
-            String ltvColumn = "d1_ltv";
+            String ltvColumn = "";
             Date lastUpdateTime = SQL_DATE_FORMAT.parse(rs.getString("last_update_time"));
 
-            if (DATE_FORMAT.format(lastUpdateTime).equals(curDate)) {//应该改为更新日期必须是大于上一次更新的日期，不能更新历史数据
+            if (DATE_FORMAT.format(lastUpdateTime).equals(curDate)) {
                 continue;
             }
 
@@ -191,31 +204,11 @@ class TableManager {
             }
 
             value = value != null ? value : "0";
-            switch (in_app_age) {
-                case 2:
-                    ltvColumn = "d2_ltv";
-                    break;
-                case 3:
-                    ltvColumn = "d3_ltv";
-                    break;
-                case 4:
-                    ltvColumn = "d4_ltv";
-                    break;
-                case 5:
-                    ltvColumn = "d5_ltv";
-                    break;
-                case 6:
-                    ltvColumn = "d6_ltv";
-                    break;
-                case 7:
-                    ltvColumn = "d7_ltv";
-                    break;
-            }
+            ltvColumn = "d" + in_app_age + "_ltv";
 
-
-            String sqlUpdateValue = "update user_value " +
-                    "set " + ltvColumn + " = \"" + value + "\", " +
-                    "last_update_time = \"" + now + "\", " +
+            String sqlUpdateValue = "update user_value ";
+            sqlUpdateValue += in_app_age >= 8 ? "set " : "set " + ltvColumn + " = \"" + value + "\", ";
+            sqlUpdateValue += "last_update_time = \"" + now + "\", " +
                     "in_app_age = " + in_app_age + " " +
                     "where device_id = \"" + deviceId + "\"";
             statement.executeUpdate(sqlUpdateValue);
