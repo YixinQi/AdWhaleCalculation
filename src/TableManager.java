@@ -1,14 +1,18 @@
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 
 class TableManager {
     private static final String CREATE_DB_SCRIPT = "create_advalue.sql";
     private static final String CREATE_DAILY_VALUE_TABLE_SCRIPT = "create_daily_value_table.sql";
     private static final String CREATE_NEW_USER_TABLE_SCRIPT = "create_new_user_table.sql";
+    private static final String CREATE_VALUE_THRESHOLD_SCRIPT = "create_value_threshold_table.sql";
     private static final String DAILY_VALUE_TABLE = "daily_value";
     private static final String DAILY_NEW_USER_TABLE = "daily_new_user";
     private static final String USER_VALUE_TABLE = "user_value";
@@ -19,11 +23,10 @@ class TableManager {
     private static final String THRESHOLD_INSERT_SQL = "INSERT INTO value_threshold VALUES (?,?,?,?,?,?,?)";
     private static final SimpleDateFormat SQL_DATE_FORMAT = new SimpleDateFormat("EEE MMM dd hh:mm:ss z yyyy", Locale.ENGLISH);
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("YYYY-MM-dd");
-
     private static final String outPutPath = "./";
+    private static final String AD_WHALE_FILE = "AdWhaleDeviceids.csv";
 
-
-    private String curDate;
+    private final String curDate;
 
     TableManager(String curDate) {
         this.curDate = curDate;
@@ -54,6 +57,7 @@ class TableManager {
 
             preparedStatement.executeUpdate();
             lineNo++;
+            preparedStatement.close();
         }
 
         br.close();
@@ -92,23 +96,10 @@ class TableManager {
         insertNewUserValues();
     }
 
-    /*void insertOrUpdateThreshold() throws SQLException {
-        for (int dayValue = 1; dayValue < 8; dayValue++) {
-            String insertOrUpdateThresholdSql = "INSERT OR REPLACE INTO value_threshold ( d" + dayValue + "_threshold )\n" +
-                    "SELECT  avg(d" + dayValue + "_ltv)\n" +
-                    "FROM    user_value  ";
+    void insertOrUpdateThreshold() throws SQLException, IOException {
+        dropTable(VALUE_THRESHOLD_TABLE);
+        createTable(CREATE_VALUE_THRESHOLD_SCRIPT);
 
-            Connection connection = DBConnector.connectDB();
-            Statement statement = connection.createStatement();
-            statement.executeUpdate(insertOrUpdateThresholdSql);
-
-            statement.close();
-            connection.close();
-        }
-    }*/
-
-    void insertOrUpdateThreshold() throws SQLException{
-        flushTable(VALUE_THRESHOLD_TABLE);
         Connection connection = DBConnector.connectDB();
         PreparedStatement preparedStatement = connection.prepareStatement(THRESHOLD_INSERT_SQL);
         Map<Integer, String> avgUserValues = avgUserValue();
@@ -116,78 +107,46 @@ class TableManager {
             preparedStatement.setString(dayValue, avgUserValues.get(dayValue));
         }
         preparedStatement.executeUpdate();
+
+        preparedStatement.close();
         connection.close();
     }
 
-    private Map<Integer, String> avgUserValue() throws SQLException {
-        Map<Integer, String> avgUserValues = new LinkedHashMap<>();
-        String valueSql = "SELECT ";
-        for (int dayValue = 1; dayValue < 8; dayValue++) {
-            valueSql += "avg(d" + dayValue + "_ltv)";
-            valueSql += dayValue < 7 ? "," : "";
-        }
-        valueSql += " FROM user_value";
-
-        Connection connection = DBConnector.connectDB();
-        Statement statement = connection.createStatement();
-        ResultSet rs = statement.executeQuery(valueSql);
-
-        while (rs.next()) {
-            for (int dayValue = 1; dayValue < 8; dayValue++) {
-                avgUserValues.put(dayValue, rs.getString(dayValue));
-            }
-        }
-
-        statement.close();
-        connection.close();
-        return avgUserValues;
-    }
-
-    void generateAdWhaleDeviceids() throws SQLException{
+    void generateAdWhaleDeviceIds() throws SQLException, IOException {
         String sql = "select device_id from (" +
-                        "select device_id,d2_ltv,d4_ltv,d6_ltv,d2_threshold,d4_threshold,d6_threshold from user_value " +
-                        "left join value_threshold " +
-                        ") " +
-                    " where  " +
-                    "(d2_ltv >= d2_threshold and d2_threshold > 0) or " +
-                    "(d4_ltv >= d4_threshold and d4_threshold > 0) or " +
-                    "(d6_ltv >= d6_threshold and d6_threshold > 0)";
+                "select device_id,d2_ltv,d4_ltv,d6_ltv,d2_threshold,d4_threshold,d6_threshold,in_app_age from user_value " +
+                "left join value_threshold " +
+                ") " +
+                " where  " +
+                "(d2_ltv >= d2_threshold and d2_threshold > 0 and in_app_age = 2) or " +
+                "(d4_ltv >= d4_threshold and d4_threshold > 0 and in_app_age = 4) or " +
+                "(d6_ltv >= d6_threshold and d6_threshold > 0 and in_app_age = 6)";
         Connection connection = DBConnector.connectDB();
         Statement statement = connection.createStatement();
         ResultSet rs = statement.executeQuery(sql);
 
-        File file = null;
-        BufferedWriter csvFileOutputStream = null;
-        try {
-            String fileName = curDate + "AdWhaleDeviceids.csv";
-            file = new File(outPutPath + fileName);
-            if (!file.exists()) {
-                file.createNewFile();
-            }
-            csvFileOutputStream = new BufferedWriter(
-                    new OutputStreamWriter(new FileOutputStream(file), "UTF-8"),
-                    1024);
-
-            while (rs.next()) {
-                String deviceId = rs.getString(1);
-                csvFileOutputStream.write(deviceId);
-                csvFileOutputStream.newLine();
-            }
-            statement.close();
-            connection.close();
-            csvFileOutputStream.flush();
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                csvFileOutputStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        String fileName = curDate + AD_WHALE_FILE;
+        File file = new File(outPutPath + fileName);
+        if (!file.exists()) {
+            file.createNewFile();
         }
+
+        BufferedWriter csvFileOutputStream = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8),
+                1024);
+        while (rs.next()) {
+            String deviceId = rs.getString(1);
+            csvFileOutputStream.write(deviceId);
+            csvFileOutputStream.newLine();
+        }
+
+        statement.close();
+        connection.close();
+        csvFileOutputStream.flush();
+        csvFileOutputStream.close();
     }
 
-    boolean checkOpsHasReaded() throws SQLException {
+    boolean checkOpsHasRead() throws SQLException {
         String checkCurDateOpsSql = "select * from daily_operation_record where op_date = \"" + curDate + "\"";
         Connection connection = DBConnector.connectDB();
         Statement statement = connection.createStatement();
@@ -273,7 +232,7 @@ class TableManager {
             String deviceId = rs.getString("device_id");
             String value = rs.getString("revenue");
             int in_app_age = rs.getInt("in_app_age") + 1;
-            String ltvColumn = "";
+            String ltvColumn;
             Date lastUpdateTime = SQL_DATE_FORMAT.parse(rs.getString("last_update_time"));
 
             if (DATE_FORMAT.format(lastUpdateTime).equals(curDate)) {
@@ -332,15 +291,7 @@ class TableManager {
 
         String flushSql = "DELETE FROM " + "'" + USER_VALUE_TABLE + "' WHERE device_id = " + "'" + deviceId + "'";
         statement.executeUpdate(flushSql);
-        statement.close();
-        connection.close();
-    }
 
-    private void flushTable(String tableName) throws SQLException{
-        Connection connection = DBConnector.connectDB();
-        Statement statement = connection.createStatement();
-        String flushSql = "DELETE FROM " + " '" + tableName + "'";
-        statement.executeUpdate(flushSql);
         statement.close();
         connection.close();
     }
@@ -389,5 +340,30 @@ class TableManager {
         statement.close();
         connection.close();
         return true;
+    }
+
+    private Map<Integer, String> avgUserValue() throws SQLException {
+        Map<Integer, String> avgUserValues = new HashMap<>();
+
+        StringBuilder valueSql = new StringBuilder("SELECT ");
+        for (int dayValue = 1; dayValue < 8; dayValue++) {
+            valueSql.append("avg(d").append(dayValue).append("_ltv)");
+            valueSql.append(dayValue < 7 ? "," : "");
+        }
+        valueSql.append(" FROM user_value");
+
+        Connection connection = DBConnector.connectDB();
+        Statement statement = connection.createStatement();
+        ResultSet rs = statement.executeQuery(valueSql.toString());
+
+        while (rs.next()) {
+            for (int dayValue = 1; dayValue < 8; dayValue++) {
+                avgUserValues.put(dayValue, rs.getString(dayValue));
+            }
+        }
+
+        statement.close();
+        connection.close();
+        return avgUserValues;
     }
 }
