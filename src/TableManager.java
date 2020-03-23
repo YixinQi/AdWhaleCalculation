@@ -53,7 +53,6 @@ class TableManager {
             preparedStatement.setDouble(4, Double.parseDouble(values[3]));
 
             preparedStatement.executeUpdate();
-            lineNo++;
         }
 
         br.close();
@@ -80,7 +79,6 @@ class TableManager {
             String[] values = line.split(",");
             preparedStatement.setString(1, values[0]);
             preparedStatement.executeUpdate();
-            lineNo++;
         }
 
         br.close();
