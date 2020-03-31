@@ -37,6 +37,7 @@ public class Executor {
             System.out.println("Start Time" + new Date());
             tableManager.loadDailyValueCSV(dailyValueCSVFile, true);
             tableManager.loadNewUserCSV(dailyNewUserCSVFile, true);
+            System.out.println("update user value: " + new Date());
             tableManager.insertOrUpdateUserValues();
             tableManager.recordOps();
             tableManager.insertOrUpdateThreshold();

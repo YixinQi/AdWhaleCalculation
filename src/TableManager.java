@@ -27,6 +27,8 @@ class TableManager {
     private static final String outPutPath = "./";
     private static final String AD_WHALE_FILE = "AdWhaleDeviceids.csv";
 
+    private static final int Statistic_Period_Days = 30;//only statistics on user data in the last 30 days, if last_updated_time is older than 30 days,the program will delete these data
+
     private final String curDate;
 
     TableManager(String curDate) {
@@ -57,7 +59,6 @@ class TableManager {
             preparedStatement.setDouble(4, Double.parseDouble(values[3]));
 
             preparedStatement.executeUpdate();
-            lineNo++;
             preparedStatement.close();
         }
 
@@ -84,7 +85,9 @@ class TableManager {
             PreparedStatement preparedStatement = connection.prepareStatement(NEW_USER_INSERT_SQL);
             String[] values = line.split(",");
             preparedStatement.setString(1, values[0]);
+
             preparedStatement.executeUpdate();
+            preparedStatement.close();
         }
 
         br.close();
@@ -224,14 +227,16 @@ class TableManager {
                 "on u.device_id = v.device_id " +
                 "group by v.device_id";
         Connection connection = DBConnector.connectDB();
-        Statement statement = connection.createStatement();
-        ResultSet rs = statement.executeQuery(sql);
+        Statement statementSelect = connection.createStatement();
+        ResultSet rs = statementSelect.executeQuery(sql);
         Date now = new Date();
         while (rs.next()) {
-            statement = connection.createStatement();
+            Statement statement = connection.createStatement();
             String deviceId = rs.getString("device_id");
             String value = rs.getString("revenue");
-            int in_app_age = rs.getInt("in_app_age") + 1;
+            int in_app_age = rs.getInt("in_app_age");
+            int in_app_age_new = in_app_age + 1;
+            double ltvValue = rs.getDouble("d" + in_app_age + "_ltv");
             String ltvColumn;
             Date lastUpdateTime = SQL_DATE_FORMAT.parse(rs.getString("last_update_time"));
 
@@ -239,24 +244,24 @@ class TableManager {
                 continue;
             }
 
-            if (in_app_age > 30) {
+            if (in_app_age > Statistic_Period_Days) {
                 deleteUserAgeOver30(deviceId);
                 continue;
             }
 
             value = value != null ? value : "0";
-            ltvColumn = "d" + in_app_age + "_ltv";
-
+            ltvColumn = "d" + in_app_age_new + "_ltv";
+            value = String.valueOf(Double.valueOf(value) + ltvValue);
             String sqlUpdateValue = "update " + USER_VALUE_TABLE;
             sqlUpdateValue += in_app_age >= 8 ? " set " : " set " + ltvColumn + " = \"" + value + "\", ";
             sqlUpdateValue += "last_update_time = \"" + now + "\", " +
-                    "in_app_age = " + in_app_age + " " +
+                    "in_app_age = " + in_app_age_new + " " +
                     "where device_id = \"" + deviceId + "\"";
             statement.executeUpdate(sqlUpdateValue);
-
             statement.close();
-            connection.close();
         }
+        statementSelect.close();
+        connection.close();
     }
 
     private void insertNewUserValues() throws SQLException {
@@ -266,22 +271,22 @@ class TableManager {
                 "on n.device_id = v.device_id " +
                 "group by v.device_id";
         Connection connection = DBConnector.connectDB();
-        Statement statement = connection.createStatement();
-        ResultSet rs = statement.executeQuery(sql);
-        Date updateDate = new Date();
-
+        Statement statementSelect = connection.createStatement();
+        ResultSet rs = statementSelect.executeQuery(sql);
+        Date insertDate = new Date();
+        System.out.println(sql);
         while (rs.next()) {
-            statement = connection.createStatement();
+            Statement statement = connection.createStatement();
             String deviceId = rs.getString("device_id");
             if (!isNewUser(deviceId)) {
                 continue;
             }
             String value = rs.getString("revenue");
-            String insertValueSql = "insert into " + USER_VALUE_TABLE + " values(\"" + deviceId + "\", " + value + ", 0, 0, 0, 0, 0, 0, 1, \"" + updateDate + "\")";
+            String insertValueSql = "insert into " + USER_VALUE_TABLE + " values(\"" + deviceId + "\", " + value + ", 0, 0, 0, 0, 0, 0, 1, \"" + insertDate + "\")";
             statement.executeUpdate(insertValueSql);
+            statement.close();
         }
-
-        statement.close();
+        statementSelect.close();
         connection.close();
     }
 
@@ -342,6 +347,7 @@ class TableManager {
         return true;
     }
 
+    //only statistics for 7 days LTV
     private Map<Integer, String> avgUserValue() throws SQLException {
         Map<Integer, String> avgUserValues = new HashMap<>();
 

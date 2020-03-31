@@ -7,7 +7,7 @@ public class TaichiLTVMockData {
 
     //private final int mockData = 100;//csv deviceids maximum
 
-    private final int mockDefaultDataNum = 5000;//csv deviceids maximum
+    private final int mockDefaultDataNum = 1000000;//csv deviceids maximum
 
     private final int mockAdunitMaxNum = 10;//ad unit id maximum
 
