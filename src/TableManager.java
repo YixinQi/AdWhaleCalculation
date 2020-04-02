@@ -127,7 +127,6 @@ class TableManager {
         Connection connection = DBConnector.connectDB();
         Statement statement = connection.createStatement();
         ResultSet rs = statement.executeQuery(sql);
-
         String fileName = curDate + AD_WHALE_FILE;
         File file = new File(outPutPath + fileName);
         if (!file.exists()) {
@@ -142,7 +141,6 @@ class TableManager {
             csvFileOutputStream.write(deviceId);
             csvFileOutputStream.newLine();
         }
-
         statement.close();
         connection.close();
         csvFileOutputStream.flush();
@@ -234,7 +232,7 @@ class TableManager {
         while (rs.next()) {
             Statement statement = connection.createStatement();
             String deviceId = rs.getString("device_id");
-            String value = rs.getString("revenue");
+            double value = rs.getDouble("revenue");
             int in_app_age = rs.getInt("in_app_age");
             int in_app_age_new = in_app_age + 1;
             double ltvValue = rs.getDouble("d" + in_app_age + "_ltv");
@@ -250,11 +248,10 @@ class TableManager {
                 continue;
             }
 
-            value = value != null ? value : "0";
             ltvColumn = "d" + in_app_age_new + "_ltv";
-            value = String.valueOf(Double.valueOf(value) + ltvValue);
+            value += ltvValue;
             String sqlUpdateValue = "update " + USER_VALUE_TABLE;
-            sqlUpdateValue += in_app_age >= 8 ? " set " : " set " + ltvColumn + " = \"" + value + "\", ";
+            sqlUpdateValue += in_app_age >= 8 ? " set " : " set " + ltvColumn + " = " + value + ", ";
             sqlUpdateValue += "last_update_time = \"" + now + "\", " +
                     "in_app_age = " + in_app_age_new + " " +
                     "where device_id = \"" + deviceId + "\"";
@@ -281,8 +278,7 @@ class TableManager {
             if (!isNewUser(deviceId)) {
                 continue;
             }
-            String value = rs.getString("revenue");
-            value = value != null ? value : "0";
+            double value = rs.getDouble("revenue");
             String insertValueSql = "insert into " + USER_VALUE_TABLE + " values(\"" + deviceId + "\", " + value + ", 0, 0, 0, 0, 0, 0, 1, \"" + insertDate + "\")";
             statement.executeUpdate(insertValueSql);
             statement.close();
