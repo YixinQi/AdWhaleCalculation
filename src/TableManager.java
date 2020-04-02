@@ -221,11 +221,12 @@ class TableManager {
     }
 
     private void updateOldUserValues() throws SQLException, ParseException {
-        String sql = "select u.*, sum(v.ads_value) as revenue " +
+        String sql = "select u.*, v.revenue " +
                 "from " + USER_VALUE_TABLE + " u " +
-                "left join " + DAILY_VALUE_TABLE + " v " +
-                "on u.device_id = v.device_id " +
-                "group by v.device_id";
+                "left join " +
+                "(select device_id, sum(ads_value) as revenue from " + DAILY_VALUE_TABLE + " group by device_id) as v " +
+                "on u.device_id = v.device_id";
+
         Connection connection = DBConnector.connectDB();
         Statement statementSelect = connection.createStatement();
         ResultSet rs = statementSelect.executeQuery(sql);
@@ -265,16 +266,15 @@ class TableManager {
     }
 
     private void insertNewUserValues() throws SQLException {
-        String sql = "select n.device_id as device_id, sum(v.ads_value) as revenue " +
+        String sql = "select n.device_id as device_id, v.revenue " +
                 "from " + DAILY_NEW_USER_TABLE + " n " +
-                "left join " + DAILY_VALUE_TABLE + " v " +
-                "on n.device_id = v.device_id " +
-                "group by v.device_id";
+                "left join " +
+                "(select device_id, sum(ads_value) as revenue from " + DAILY_VALUE_TABLE + " group by device_id) as v " +
+                "on n.device_id = v.device_id";
         Connection connection = DBConnector.connectDB();
         Statement statementSelect = connection.createStatement();
         ResultSet rs = statementSelect.executeQuery(sql);
         Date insertDate = new Date();
-        System.out.println(sql);
         while (rs.next()) {
             Statement statement = connection.createStatement();
             String deviceId = rs.getString("device_id");
@@ -282,6 +282,7 @@ class TableManager {
                 continue;
             }
             String value = rs.getString("revenue");
+            value = value != null ? value : "0";
             String insertValueSql = "insert into " + USER_VALUE_TABLE + " values(\"" + deviceId + "\", " + value + ", 0, 0, 0, 0, 0, 0, 1, \"" + insertDate + "\")";
             statement.executeUpdate(insertValueSql);
             statement.close();
