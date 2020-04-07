@@ -120,6 +120,11 @@ class TableManager {
             }
             PreparedStatement preparedStatement = connection.prepareStatement(NEW_USER_INSERT_SQL);
             String[] values = line.split(",");
+            Pattern pattern = Pattern.compile("^[a-z0-9A-Z]{1}([a-z0-9A-Z-])*[a-z0-9A-Z]$");
+            Matcher isDevice = pattern.matcher(values[0]);
+            if (!isDevice.matches()) {
+                continue;
+            }
             preparedStatement.setString(1, values[0]);
 
             preparedStatement.executeUpdate();
