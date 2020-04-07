@@ -7,6 +7,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 class TableManager {
     private static final String CREATE_DB_SCRIPT = "create_advalue.sql";
@@ -53,6 +55,11 @@ class TableManager {
             }
             PreparedStatement preparedStatement = connection.prepareStatement(AD_VALUE_INSERT_SQL);
             String[] values = line.split(",");
+            if (!checkCSVData(values)) {
+                System.out.println("invalid data");
+                continue;
+            }
+
             preparedStatement.setString(1, values[0]);
             preparedStatement.setString(2, values[1]);
             preparedStatement.setInt(3, Integer.parseInt(values[2]));
@@ -64,6 +71,35 @@ class TableManager {
 
         br.close();
         connection.close();
+    }
+
+    boolean checkCSVData(String[] csvValue) {
+        if (csvValue.length != 4) {
+            return false;
+        }
+        Pattern pattern = Pattern.compile("^[a-z0-9A-Z]{1}([a-z0-9A-Z-])*[a-z0-9A-Z]$");
+        Matcher isDevice = pattern.matcher(csvValue[0]);
+        if (!isDevice.matches()) {
+            return false;
+        }
+
+        pattern = Pattern.compile("[a-z0-9A-Z]*");
+        Matcher isAdId = pattern.matcher(csvValue[1]);
+        if (!isAdId.matches()) {
+            return false;
+        }
+
+        pattern = Pattern.compile("[0-9]*");
+        Matcher isNum = pattern.matcher(csvValue[2]);
+        if (!isNum.matches()) {
+            return false;
+        }
+        try {
+            Double.parseDouble(csvValue[3]);
+        } catch (Exception e) {
+            return false;
+        }
+        return true;
     }
 
     void loadNewUserCSV(String csvFile, boolean truncateBeforeLoad) throws Exception {
