@@ -29,7 +29,7 @@ class TableManager {
     private static final String outPutPath = "./";
     private static final String AD_WHALE_FILE = "AdWhaleDeviceids.csv";
 
-    private static final int Statistic_Period_Days = 30;//only statistics on user data in the last 30 days, if last_updated_time is older than 30 days,the program will delete these data
+    private static final int STATISTICE_PERIOD_DAYS = 30;//only statistics on user data in the last 30 days, if last_updated_time is older than 30 days,the program will delete these data
 
     private final String curDate;
 
@@ -38,7 +38,7 @@ class TableManager {
     }
 
     void loadDailyValueCSV(String csvFile,
-                           boolean truncateBeforeLoad) throws Exception {
+                           boolean truncateBeforeLoad) throws SQLException, IOException {
         if (truncateBeforeLoad) {
             dropTable(DAILY_VALUE_TABLE);
             createTable(CREATE_DAILY_VALUE_TABLE_SCRIPT);
@@ -73,36 +73,7 @@ class TableManager {
         connection.close();
     }
 
-    boolean checkCSVData(String[] csvValue) {
-        if (csvValue.length != 4) {
-            return false;
-        }
-        Pattern pattern = Pattern.compile("^[a-z0-9A-Z]{1}([a-z0-9A-Z-])*[a-z0-9A-Z]$");
-        Matcher isDevice = pattern.matcher(csvValue[0]);
-        if (!isDevice.matches()) {
-            return false;
-        }
-
-        pattern = Pattern.compile("[a-z0-9A-Z]*");
-        Matcher isAdId = pattern.matcher(csvValue[1]);
-        if (!isAdId.matches()) {
-            return false;
-        }
-
-        pattern = Pattern.compile("[0-9]*");
-        Matcher isNum = pattern.matcher(csvValue[2]);
-        if (!isNum.matches()) {
-            return false;
-        }
-        try {
-            Double.parseDouble(csvValue[3]);
-        } catch (Exception e) {
-            return false;
-        }
-        return true;
-    }
-
-    void loadNewUserCSV(String csvFile, boolean truncateBeforeLoad) throws Exception {
+    void loadNewUserCSV(String csvFile, boolean truncateBeforeLoad) throws SQLException, IOException {
         if (truncateBeforeLoad) {
             dropTable(DAILY_NEW_USER_TABLE);
             createTable(CREATE_NEW_USER_TABLE_SCRIPT);
@@ -135,7 +106,7 @@ class TableManager {
         connection.close();
     }
 
-    void insertOrUpdateUserValues() throws Exception {
+    void insertOrUpdateUserValues() throws SQLException, ParseException {
         updateOldUserValues();
         insertNewUserValues();
     }
@@ -284,7 +255,7 @@ class TableManager {
                 continue;
             }
 
-            if (in_app_age > Statistic_Period_Days) {
+            if (in_app_age > STATISTICE_PERIOD_DAYS) {
                 deleteUserAgeOver30(deviceId);
                 continue;
             }
@@ -409,5 +380,34 @@ class TableManager {
         statement.close();
         connection.close();
         return avgUserValues;
+    }
+
+    private boolean checkCSVData(String[] csvValue) {
+        if (csvValue.length != 4) {
+            return false;
+        }
+        Pattern pattern = Pattern.compile("^[a-z0-9A-Z]{1}([a-z0-9A-Z-])*[a-z0-9A-Z]$");
+        Matcher isDevice = pattern.matcher(csvValue[0]);
+        if (!isDevice.matches()) {
+            return false;
+        }
+
+        pattern = Pattern.compile("[a-z0-9A-Z]*");
+        Matcher isAdId = pattern.matcher(csvValue[1]);
+        if (!isAdId.matches()) {
+            return false;
+        }
+
+        pattern = Pattern.compile("[0-9]*");
+        Matcher isNum = pattern.matcher(csvValue[2]);
+        if (!isNum.matches()) {
+            return false;
+        }
+        try {
+            Double.parseDouble(csvValue[3]);
+        } catch (Exception e) {
+            return false;
+        }
+        return true;
     }
 }
